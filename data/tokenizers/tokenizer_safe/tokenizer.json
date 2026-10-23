@@ -1,0 +1,169 @@
+{
+  "version": "1.0",
+  "truncation": null,
+  "padding": null,
+  "added_tokens": [
+    {
+      "id": 0,
+      "content": "<s>",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 1,
+      "content": "<pad>",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 2,
+      "content": "</s>",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    },
+    {
+      "id": 3,
+      "content": "<unk>",
+      "single_word": false,
+      "lstrip": false,
+      "rstrip": false,
+      "normalized": false,
+      "special": true
+    }
+  ],
+  "normalizer": null,
+  "pre_tokenizer": {
+    "type": "Split",
+    "pattern": {
+      "Regex": "\\[[^\\]]+\\]|Br|Cl|%\\(\\d+\\)|%\\d{2}|[0-9]|[BCNOPSFIbcnops]|\\(|\\)|\\.|=|#|-|\\+|/|\\\\|:|~|@|\\*"
+    },
+    "behavior": "Isolated",
+    "invert": false
+  },
+  "post_processor": {
+    "type": "TemplateProcessing",
+    "single": [
+      {
+        "SpecialToken": {
+          "id": "<s>",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "SpecialToken": {
+          "id": "</s>",
+          "type_id": 0
+        }
+      }
+    ],
+    "pair": [
+      {
+        "Sequence": {
+          "id": "A",
+          "type_id": 0
+        }
+      },
+      {
+        "Sequence": {
+          "id": "B",
+          "type_id": 1
+        }
+      }
+    ],
+    "special_tokens": {
+      "</s>": {
+        "id": "</s>",
+        "ids": [
+          2
+        ],
+        "tokens": [
+          "</s>"
+        ]
+      },
+      "<s>": {
+        "id": "<s>",
+        "ids": [
+          0
+        ],
+        "tokens": [
+          "<s>"
+        ]
+      }
+    }
+  },
+  "decoder": {
+    "type": "Fuse"
+  },
+  "model": {
+    "type": "WordLevel",
+    "vocab": {
+      "<s>": 0,
+      "<pad>": 1,
+      "</s>": 2,
+      "<unk>": 3,
+      "c": 4,
+      "C": 5,
+      "1": 6,
+      ".": 7,
+      "O": 8,
+      "(": 9,
+      ")": 10,
+      "=": 11,
+      "N": 12,
+      "5": 13,
+      "4": 14,
+      "2": 15,
+      "6": 16,
+      "7": 17,
+      "n": 18,
+      "3": 19,
+      "8": 20,
+      "9": 21,
+      "%10": 22,
+      "F": 23,
+      "%11": 24,
+      "S": 25,
+      "Cl": 26,
+      "%12": 27,
+      "s": 28,
+      "o": 29,
+      "[nH]": 30,
+      "%13": 31,
+      "%14": 32,
+      "#": 33,
+      "[O-]": 34,
+      "[N+]": 35,
+      "Br": 36,
+      "%15": 37,
+      "%16": 38,
+      "%17": 39,
+      "%18": 40,
+      "-": 41,
+      "P": 42,
+      "[n+]": 43,
+      "%19": 44,
+      "I": 45,
+      "[S+]": 46,
+      "[Si]": 47,
+      "[N-]": 48,
+      "[C-]": 49,
+      "%20": 50
+    },
+    "unk_token": "<unk>"
+  }
+}

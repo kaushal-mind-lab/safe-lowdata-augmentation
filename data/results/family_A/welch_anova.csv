@@ -1,0 +1,7 @@
+metric,role,direction,welch_F,df1,df2,welch_p,eta2_classical_descriptive,omega2_classical_descriptive,effect_size_note,note
+yield,primary,up,126418.53858681297,2,5.359595833654067,2.9879989266789063e-13,0.9989790683149374,0.998723943957509,"classical equal-variance SS decomposition; descriptive companion to the Welch test, not a Welch-specific effect size",
+genuine_yield,primary,up,76147.59565250792,2,5.359906187023823,1.1606738815221262e-12,0.9988753629210627,0.9985943353898735,"classical equal-variance SS decomposition; descriptive companion to the Welch test, not a Welch-specific effect size",
+validity,secondary,up,2869.629028834873,2,5.3723451280473995,7.299944436707106e-09,0.996330393266758,0.9954143938643767,"classical equal-variance SS decomposition; descriptive companion to the Welch test, not a Welch-specific effect size",
+uniqueness,secondary,up,136008.0542210174,2,5.358503446492274,2.46956898082446e-13,0.9988845021681338,0.9986057573163915,"classical equal-variance SS decomposition; descriptive companion to the Welch test, not a Welch-specific effect size",
+novelty,secondary,up,384882.6562058693,2,5.946686630349612,6.309738586260342e-16,0.9999177018757084,0.9998971280501494,"classical equal-variance SS decomposition; descriptive companion to the Welch test, not a Welch-specific effect size",
+seed_recovery,secondary,down,28985.009569100424,2,5.360511156384129,1.540808848619057e-11,0.9986954347351217,0.9983694706798949,"classical equal-variance SS decomposition; descriptive companion to the Welch test, not a Welch-specific effect size",

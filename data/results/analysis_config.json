@@ -1,0 +1,79 @@
+{
+  "csv": "/data/kaushal/projects_active/fragopt_study/generated_sweep/sweep_run_level.csv",
+  "n_per_arm": 5,
+  "families": {
+    "family_A": {
+      "label": "Family A - corpus size: does more augmentation help?",
+      "arms": [
+        "part1_arm_a",
+        "part1_arm_b",
+        "part1_arm_c"
+      ],
+      "pretty": {
+        "part1_arm_a": "1K",
+        "part1_arm_b": "25K",
+        "part1_arm_c": "50K"
+      }
+    },
+    "family_B": {
+      "label": "Family B - randomization axis: which axis drives the gain?",
+      "arms": [
+        "part2_arm_atom",
+        "part2_arm_dot",
+        "part2_arm_full"
+      ],
+      "pretty": {
+        "part2_arm_atom": "atom",
+        "part2_arm_dot": "dot",
+        "part2_arm_full": "full"
+      }
+    },
+    "family_C": {
+      "label": "Family C - representation: does SAFE beat randomized SMILES?",
+      "arms": [
+        "part3_arm_safe",
+        "part3_arm_smiles"
+      ],
+      "pretty": {
+        "part3_arm_safe": "SAFE",
+        "part3_arm_smiles": "SMILES"
+      }
+    }
+  },
+  "metrics": {
+    "yield": {
+      "column": "yield",
+      "role": "primary",
+      "direction": "up"
+    },
+    "genuine_yield": {
+      "column": "genuine_yield",
+      "role": "primary",
+      "direction": "up"
+    },
+    "validity": {
+      "column": "validity",
+      "role": "secondary",
+      "direction": "up"
+    },
+    "uniqueness": {
+      "column": "uniqueness",
+      "role": "secondary",
+      "direction": "up"
+    },
+    "novelty": {
+      "column": "novelty",
+      "role": "secondary",
+      "direction": "up"
+    },
+    "seed_recovery": {
+      "column": "seed_recovery",
+      "role": "secondary",
+      "direction": "down"
+    }
+  },
+  "diversity_descriptive_only": [
+    "intdiv_novel_mol",
+    "intdiv_novel_scaffold"
+  ]
+}
