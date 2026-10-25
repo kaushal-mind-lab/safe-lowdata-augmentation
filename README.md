@@ -1,5 +1,4 @@
-# What to Randomize Matters: A Controlled Study of Augmentation Volume, Axis and Representation in Low-Data Chemical Language Modeling
-
+# What to randomize matters: a controlled study of volume, axis and representation in low-data molecular generation
 Code and data for a controlled study of randomized SAFE augmentation for a small decoder-only OPT chemical language model trained from 1,000 seed molecules (GuacaMol). Three comparisons, all with the same architecture, objective, optimizer and number of steps (20,000) with only the training corpus (and, in Family C, its tokenizer) changes.
 
 | Family | Question | Arms (training strings) |
