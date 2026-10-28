@@ -48,6 +48,8 @@ def seed_string(smi, mode):
 
 
 def variants(smi, n, seed0, mode):
+   # Generate up to n unique SAFE variants, including the canonical representation, using the selected randomization mode
+
     out = set()
     s0 = seed_string(smi, mode)
     if s0:
@@ -99,6 +101,7 @@ def randomize(smi, seed):
 
 
 def variants(smi, n, seed0):
+    # Generate up to n unique randomized SMILES strings, including the canonical representation
     m = Chem.MolFromSmiles(smi)
     out = {Chem.MolToSmiles(m, canonical=True)} if m else set()   # canonical seed, by design
     for k in range(n * 50):
