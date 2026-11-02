@@ -84,7 +84,7 @@ def largest_fragment(smi):  # the delivered molecule: largest connected componen
     frags = Chem.GetMolFrags(m, asMols=True, sanitizeFrags=True)
     return Chem.MolToSmiles(max(frags, key=lambda x: x.GetNumHeavyAtoms())) if frags else None
 
-
+# Generate molecular strings in batches, starting each sequence with the BOS token
 @torch.no_grad()
 def generate(model, tok, n, seed):
     set_seed(seed)
@@ -104,7 +104,7 @@ def generate(model, tok, n, seed):
 def morgan(mol):
     return AllChem.GetMorganFingerprintAsBitVect(mol, 2, 2048)
 
-
+# Calculate mean pairwise Tanimoto similarity across all molecular fingerprints
 def mean_pairwise(fps):
     tot, cnt = 0.0, 0
     for i in range(len(fps)):
@@ -112,7 +112,7 @@ def mean_pairwise(fps):
         tot += sum(sims); cnt += len(sims)
     return tot / cnt if cnt else NAN
 
-
+# Calculate internal diversity as 1 - mean Tanimoto similarity for molecules and their Murcko scaffolds
 def diversity(smis):  # internal diversity over molecules and Murcko scaffolds (duplicates included, as in MOSES)
     mols = [m for m in (Chem.MolFromSmiles(s) for s in smis) if m is not None]
     mol_fps = [morgan(m) for m in mols]
@@ -141,7 +141,7 @@ def load_refs(train_csv):  # seed molecules, seeds+validation, seed fingerprints
     seed_fps = [morgan(m) for m in (Chem.MolFromSmiles(s) for s in train_mols) if m]
     return train_mols, tv_mols, seed_fps
 
-
+# Evaluate generated molecules for validity, uniqueness, novelty, diversity, and similarity to training seeds
 def metrics(gen_list, rep, train_mols, tv_mols, seed_fps):
     n = len(gen_list)
     parsed = [decode(s, rep) for s in gen_list]                       # may be multi-component
@@ -180,7 +180,7 @@ def metrics(gen_list, rep, train_mols, tv_mols, seed_fps):
 def fmt(v):
     return f"{v:.4f}" if isinstance(v, (float, np.floating)) else str(v)
 
-
+# Generate multiple independent sets for one experimental arm and save evaluation results
 def run_arm(name, model_dir, train_csv, rep):
     print(f"arm={name} rep={rep}\n  model={model_dir}\n  train={train_csv}\n  device={device}", flush=True)
     tok = AutoTokenizer.from_pretrained(model_dir)

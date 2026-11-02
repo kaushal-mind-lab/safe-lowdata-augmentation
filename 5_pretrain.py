@@ -15,7 +15,7 @@ from transformers import (
     TrainingArguments,
     set_seed,
 )
-
+# Use a configurable YAML file to keep model settings and training parameters separate from the code
 cfg = yaml.safe_load(open(os.environ.get("CONFIG", "config_pretrain.yaml")))
 set_seed(cfg["SEED"])
 is_main = PartialState().is_main_process
@@ -28,6 +28,7 @@ if tok.pad_token is None:
 
 # data: separate train/valid files, SAFE column -> tokenize (truncate only; collator pads)
 def load(path):
+    # Convert molecular strings from CSV into a tokenized Hugging Face dataset
     df = pd.read_csv(path)[[cfg["COL"]]].dropna()
     df.columns = ["text"]
     ds = Dataset.from_pandas(df, preserve_index=False)
@@ -39,7 +40,7 @@ def load(path):
 train_ds = load(cfg["TRAIN_CSV"])
 valid_ds = load(cfg["VALID_CSV"])
 
-# model is decoder-only OPT, causal LM
+# Initialize an OPT causal language model from scratch using the architecture specified in the config
 model = OPTForCausalLM(
     OPTConfig(
         vocab_size=len(tok),
@@ -53,7 +54,7 @@ model = OPTForCausalLM(
         eos_token_id=tok.eos_token_id,
     )
 )
-
+# Initialize experiment tracking only on the main process to avoid duplicate W&B runs
 if is_main:
     wandb.init(entity=cfg.get("WANDB_ENTITY", None),
                project=cfg["WANDB_PROJECT"],
@@ -95,7 +96,7 @@ trainer = Trainer(
     data_collator=DataCollatorForLanguageModeling(tok, mlm=False),   # causal LM (not MLM)
 )
 trainer.train()
-
+# Save the final model and tokenizer, then report validation loss and perplexity
 if is_main:
     best = os.path.join(cfg["OUTPUT_DIR"], "best")
     trainer.save_model(best)

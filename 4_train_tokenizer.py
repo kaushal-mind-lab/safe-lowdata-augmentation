@@ -36,6 +36,7 @@ tok.decoder = decoders.Fuse()                            # concatenate tokens ba
 trainer = trainers.WordLevelTrainer(special_tokens=SPECIALS, min_frequency=1)
 tok.train_from_iterator(corpus, trainer=trainer)
 
+# Add beginning-of-sequence and end-of-sequence tokens to each input
 tok.post_processor = processors.TemplateProcessing(
     single="<s> $A </s>",
     special_tokens=[("<s>", tok.token_to_id("<s>")), ("</s>", tok.token_to_id("</s>"))],
@@ -61,6 +62,7 @@ VALID_FROM = "/data/input/valid_200.csv"
 vocab = set(hf.get_vocab())
 
 def unk_check(name, path):
+    # Count unknown tokens in a dataset and report their frequencies
     strings = pd.read_csv(path)[COL].dropna().astype(str).tolist()
     bad = {}
     for s in strings:
