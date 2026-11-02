@@ -1,4 +1,5 @@
 """
+Statistical analysis of run-level molecular-generation metrics.
 
 Input   ./generated_sweep/sweep_run_level.csv
 Output  ./results/
@@ -53,8 +54,10 @@ FAMILIES = {
     },
 }
 
-# canonical name -> (column in all_arms_metrics.csv, role, direction)
-# "up" = higher is better. Column names verified against the real file.
+# Metric name -> (column in sweep_run_level.csv, role, direction)
+# "up" and "down" indicate the preferred direction for this study.
+# Required columns are checked by validate().
+
 METRICS = {
     "yield":         ("yield",         "primary",   "up"),
     "genuine_yield": ("genuine_yield", "primary",   "up"),
@@ -75,8 +78,10 @@ EFFECT_SIZE_NOTE = ("classical equal-variance SS decomposition; descriptive "
 
 ARM_COL = "arm"
 SET_COL = "train_seed"
-N_EXPECTED = 5
-# descriptive only 
+N_EXPECTED = 5           # Expected number of independent training runs per arm.
+
+# Optional diversity summaries over novel molecules/scaffolds.
+# No hypothesis tests are performed for these columns.
 DIVERSITY = ["intdiv_novel_mol", "intdiv_novel_scaffold"]
 
 
@@ -115,6 +120,7 @@ def welch_anova(groups):
     # statistic, so these are descriptive companions to the Welch test, NOT
     # "the effect size of the Welch ANOVA". They are named and annotated in the
     # output so they cannot be read that way.
+  
     allx = np.concatenate(groups)
     grand = allx.mean()
     ss_b = (n * (m - grand) ** 2).sum()
@@ -130,7 +136,11 @@ def welch_anova(groups):
 
 
 def _solve_ncp(t_obs, df, target_cdf):
-    """Noncentrality lambda with nct.cdf(t_obs, df, lambda) == target_cdf. """
+    """Noncentrality lambda with nct.cdf(t_obs, df, lambda) == target_cdf. 
+    Find one end of the effect-size interval by working backward from a
+    probability to the value that produces it.
+    This helper does not change any input data.
+    """
     def f(lam):
         try:
             v = stats.nct.cdf(t_obs, df, lam)
@@ -142,6 +152,8 @@ def _solve_ncp(t_obs, df, target_cdf):
         return np.nan
     lo = hi = float(t_obs)
     flo = fhi = f(lo)
+    # Start near the observed score. Search left or right until the answer
+    # is bracketed between two values, then use a more precise search.
     if not np.isfinite(flo):
         return np.nan
     if flo == 0.0:
@@ -157,6 +169,8 @@ def _solve_ncp(t_obs, df, target_cdf):
         if not np.isfinite(v):          # overshot into the underflow region
             step *= 0.5
             if step < floor:
+               # If the probability calculation fails far from the starting point,
+               # try a smaller step. If the search cannot continue, return a missing value.
                 return np.nan
             continue
         if go_right:
@@ -180,10 +194,18 @@ def _solve_ncp(t_obs, df, target_cdf):
 
 
 def hedges_g(a, b, alpha=0.05):
-    """Hedges' g (bias-corrected Cohen's d) with an exact noncentral-t 95% CI."""
+    """ The approximate correction and confidence interval assume 
+    independent groups with equal variances, unlike Welch’s unequal-variance approach.  
+    The requested coverage comes from alpha; the default alpha=0.05 gives 95%. 
+    """
+  
     a, b = np.asarray(a, float), np.asarray(b, float)
     na, nb = a.size, b.size
     va, vb = a.var(ddof=1), b.var(ddof=1)
+  
+    # Combine the two groups’ spreads to get the shared standard deviation.
+    # J makes an approximate adjustment for the small sample size.
+  
     s_pool = np.sqrt(((na - 1) * va + (nb - 1) * vb) / (na + nb - 2))
     J = 1 - 3.0 / (4 * (na + nb) - 9)               # small-sample correction
 
@@ -191,11 +213,17 @@ def hedges_g(a, b, alpha=0.05):
         return dict(hedges_g=np.nan, g_se=np.nan, g_ci_low=np.nan,
                     g_ci_high=np.nan, g_ci_method="undefined (zero pooled SD)")
 
+    # First calculate the standardized difference, then apply the adjustment.
+    # The reported g_se is an approximate measure of uncertainty in g.
+
     d = (a.mean() - b.mean()) / s_pool
     g = J * d
     se_d = np.sqrt((na + nb) / (na * nb) + d ** 2 / (2 * (na + nb)))
     se_g = J * se_d
 
+    # Find interval endpoints using the pooled, equal-variance model.
+    # These are individual pair intervals; they are not adjusted across all pairs.
+  
     df = na + nb - 2
     c = np.sqrt(na * nb / (na + nb))                # d -> t scaling
     t_obs = d * c
@@ -213,6 +241,11 @@ def hedges_g(a, b, alpha=0.05):
                 g_ci_method="normal-approx (noncentral-t did not converge)")
 
 
+# Compare every pair of setups within one family and one metric.
+# Games-Howell lets groups have different spreads and sizes.
+# Its p-values and mean-difference intervals account for the pairs within
+# this metric. It applies no extra adjustment across metrics.
+
 def games_howell(groups, names, alpha=0.05):
     """Games-Howell post-hoc: all pairs, unequal variances, unequal n."""
     k = len(groups)
@@ -224,6 +257,8 @@ def games_howell(groups, names, alpha=0.05):
         va, vb = a.var(ddof=1), b.var(ddof=1)
 
         se2 = va / na + vb / nb                     # variance of the difference
+        # The mean difference is always A minus B in the current metric's units.
+        # For yield, these units are molecules per 10,000 sampled strings.
         se = np.sqrt(se2)
         diff = ma - mb
         if se2 <= 0:
@@ -238,6 +273,7 @@ def games_howell(groups, names, alpha=0.05):
         df = se2 ** 2 / ((va / na) ** 2 / (na - 1) + (vb / nb) ** 2 / (nb - 1))
         t = diff / se
         q = np.sqrt(2) * abs(t)                     # studentized range statistic
+       # Use each group's own spread to estimate uncertainty in the difference.
         p = float(stats.studentized_range.sf(q, k, df))
         q_crit = stats.studentized_range.ppf(1 - alpha, k, df)
         half = q_crit / np.sqrt(2) * se
@@ -257,6 +293,11 @@ def welch_ttest(a, b, alpha=0.05):
     a, b = np.asarray(a, float), np.asarray(b, float)
     na, nb = a.size, b.size
     va, vb = a.var(ddof=1), b.var(ddof=1)
+  
+    # Compare the two means for SAFE versus SMILES.
+    # Two-sided means differences in either direction can count as evidence.
+    # The confidence interval here is for A minus B, in the original score units.
+  
     se = np.sqrt(va / na + vb / nb)
     diff = a.mean() - b.mean()
     if se <= 0:
@@ -277,6 +318,10 @@ def levene_median(groups):
     """Levene's test, median-centered (Brown-Forsythe): robust to non-normality."""
     try:
         W, p = stats.levene(*groups, center="median")
+      
+        # Check whether group spreads differ, using distance from each group's median.
+        # This is background information only. It does not choose which main test runs.
+      
         return dict(levene_W=float(W), levene_p=float(p))
     except Exception as e:
         return dict(levene_W=np.nan, levene_p=np.nan, levene_note=str(e))
@@ -288,6 +333,8 @@ def sd_ratio(groups):
     return max(sds) / lo if lo > 0 else np.inf
 
 
+# A tie here means numbers are close under NumPy’s tolerance,
+# not that a formal test has shown the setups to be equivalent.
 def better_arm(name_a, name_b, mean_a, mean_b, direction):
     if np.isclose(mean_a, mean_b):
         return "tie"
@@ -311,7 +358,7 @@ def validate(df):
     problems = [f"  {a}: found {counts.get(a, 0)} rows, expected {N_EXPECTED}"
                 for a in expected if counts.get(a, 0) != N_EXPECTED]
     if problems:
-        sys.exit("[design] generation-set counts are wrong - refusing to run statistics:\n"
+        sys.exit("[design] training-run row counts are wrong - refusing to run statistics:\n"
                  + "\n".join(problems)
                  + f"\n  arms present: {sorted(counts)}")
 
@@ -358,8 +405,10 @@ def strip_plot(df, fam_key, fam, metric, path):
     arrow = "higher is better" if DIRECTION[metric] == "up" else "LOWER is better"
     ax.set_ylabel(f"{metric}  ({arrow})")
     ax.set_title(f"{fam_key.replace('_', ' ')}: {metric}\n"
-                 f"each point = for one train set, average of three 10,000-molecule generation sets (n={N_EXPECTED}); "
-                 f"bar = mean, whisker = SD", fontsize=9)
+                 f"each point = one trained model, average over three"
+                 f"10,000-molecule generation batches; (n={N_EXPECTED} models per arm\n); "
+                 f"horizontal bar = mean; whisker = SD", 
+                 fontsize=9)
     ax.spines[["top", "right"]].set_visible(False)
     ax.grid(axis="y", alpha=0.25)
     fig.tight_layout()
@@ -388,7 +437,7 @@ def main():
     print(f"[input] {csv}")
     print(
         f"        {len(df)} rows, {df[ARM_COL].nunique()} arms, "
-        f"{N_EXPECTED} training sets each"
+        f"{N_EXPECTED} training runs per arm"
     )
 
     os.makedirs(out, exist_ok=True)
@@ -460,6 +509,8 @@ def main():
             ])
 
             an.to_csv(
+                # Families with three setups use an overall Welch comparison first.
+                # The pair comparisons below run for every metric, regardless of this p-value.
                 os.path.join(fdir, "welch_anova.csv"),
                 index=False,
             )
@@ -484,7 +535,7 @@ def main():
                         r["mean_B"],
                         DIRECTION[m],
                     )
-
+                    # Compare all three pairs for each metric and add labels.
                     r["ci_excludes_zero"] = bool(
                         r["ci_low"] > 0 or r["ci_high"] < 0
                     )
@@ -509,6 +560,10 @@ def main():
 
             gh.to_csv(
                 os.path.join(fdir, "games_howell.csv"),
+                # Flag whether the mean-difference interval lies entirely above or below zero.
+                # This flag refers to that interval, not to the separately reported g interval.
+                # Missing interval limits also produce False here; False alone is not proof
+                # that the setups are the same.
                 index=False,
             )
 
@@ -543,6 +598,8 @@ def main():
                 tt.append(r)
 
                 g = hedges_g(a, b)
+                # The two-setup family uses Welch t-tests and saves standardized differences
+                # in a separate file. Both calculations use the same five model-run values.
                 g.update(
                     metric=m,
                     role=ROLE[m],
@@ -606,6 +663,9 @@ def main():
             #     os.path.join(fdir, f"{m}_stripplot.png"),
             # )
 
+     # Summarize diversity columns only when they exist in the input.
+    # These summaries do not test differences and do not establish significance.
+
     if div_cols:
         rows = []
 
@@ -635,7 +695,11 @@ def main():
                     )
 
                 means = np.array(means)
-
+              
+                # This additional row summarizes the setup means, not individual model runs.
+                # Its n is the number of setups. Its minimum and maximum are setup means,
+                # not interval limits. It deliberately has no standard deviation.
+              
                 rows.append(
                     dict(
                         family=fam_key,
@@ -655,6 +719,7 @@ def main():
             index=False,
         )
 
+# This file does not record the three underlying batches or prove their independence.
     with open(
         os.path.join(out, "analysis_config.json"), "w"
     ) as f:
