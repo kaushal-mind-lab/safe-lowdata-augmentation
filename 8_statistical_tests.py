@@ -283,12 +283,14 @@ def levene_median(groups):
 
 
 def sd_ratio(groups):
+    """Calculate the ratio of the largest to smallest group standard deviation."""
     sds = [float(np.std(g, ddof=1)) for g in groups]
     lo = min(sds)
     return max(sds) / lo if lo > 0 else np.inf
 
 
 def better_arm(name_a, name_b, mean_a, mean_b, direction):
+    """Identify the better-performing arm based on the metric's preferred direction."""
     if np.isclose(mean_a, mean_b):
         return "tie"
     if direction == "up":
@@ -300,6 +302,7 @@ def better_arm(name_a, name_b, mean_a, mean_b, direction):
 # validation
 # --------------------------------------------------------------------------
 def validate(df):
+    """Check required columns, expected experiment sizes, and missing metric values."""
     need = [ARM_COL, SET_COL] + [COLUMN[m] for m in METRICS]
     missing = [c for c in need if c not in df.columns]
     if missing:
